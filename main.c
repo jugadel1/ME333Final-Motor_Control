@@ -22,8 +22,7 @@ int main(){
   icontrolstartup(); //initialize timers 
 
   __builtin_enable_interrupts();
-  makeWaveform();          // Creates REF waveform square wave 
-  
+
   while (1){
     NU32DIP_ReadUART1(buffer, BUF_SIZE); // we expect the next character to be a menu command
     NU32DIP_YELLOW = 1;               // clear the error LED
@@ -64,7 +63,6 @@ int main(){
     }
 
     case 'e':{ // reset the encoder count to 32768
-      // NU32DIP_WriteUART1("Resetting encoder count.\r\n"); 
       WriteUART2("b");
       break;       
     }
@@ -72,7 +70,7 @@ int main(){
     case 'f':{ // (Set PWM (-100 to 100)).
       int pwmval;
       int proc;
-      NU32DIP_WriteUART1('Enter your desired PWM duty (-100 to 100):');
+      // NU32DIP_WriteUART1('Enter your desired PWM duty (-100 to 100):');
       NU32DIP_ReadUART1(buffer, BUF_SIZE);
       sscanf(buffer, "%d", &pwmval);  
       
@@ -102,15 +100,10 @@ int main(){
       break;       
     }
     case 'g':{ // Set current gains.
-      int kp;
-      int ki;
-      NU32DIP_WriteUART1('Enter your desired Kp current gain [recommended: _]:\r\n');
+      float kp;
+      float ki;
       NU32DIP_ReadUART1(buffer, BUF_SIZE);
-      sscanf(buffer, "%f", &kp);        
-      
-      NU32DIP_WriteUART1('Enter your desired Ki current gain [recommended: _]:\r\n');
-      NU32DIP_ReadUART1(buffer, BUF_SIZE);
-      sscanf(buffer, "%f", &ki);        
+      sscanf(buffer, "%f %f", &kp, &ki);  
 
       sprintf(buffer, "Sending Kp = %f and Ki = %f to the current controller.\r\n",kp,ki);
       NU32DIP_WriteUART1(buffer);
@@ -118,42 +111,56 @@ int main(){
       break;       
     }
     case 'h':{ // Get current gains.
-      int kp;
-      int ki; 
-
+      float kp;
+      float ki; 
+      
+      kp = get_igain_kp();
+      ki = get_igain_ki();
       sprintf(buffer, "The current controller is using Kp = %f and Ki = %f.\r\n",kp,ki);
       NU32DIP_WriteUART1(buffer);
       break;       
     }
-    case 'g':{ // Set position gains.
-      int kp;
-      int ki;
-      NU32DIP_WriteUART1('Enter your desired Kp position gain [recommended: _]:\r\n');
-      NU32DIP_ReadUART1(buffer, BUF_SIZE);
-      sscanf(buffer, "%f", &kp);        
+    case 'i':{ // Set position gains.
+      float kp;
+      float ki;
+      float kd;
       
-      NU32DIP_WriteUART1('Enter your desired Ki position gain [recommended: _]:\r\n');
       NU32DIP_ReadUART1(buffer, BUF_SIZE);
-      sscanf(buffer, "%f", &ki);        
-
-      sprintf(buffer, "Sending Kp = %f and Ki = %f to the position controller.\r\n",kp,ki);
+      sscanf(buffer, "%f %f %f", &kp, &ki, &kd);       
+      
+      sprintf(buffer, "Sending Kp = %f and Ki = %f and Ki = %f to the position controller.\r\n",kp,ki,kd);
       NU32DIP_WriteUART1(buffer);
-      set_pgains(kp,ki);
+      set_pgains(kp,ki,kd);
       break;       
     }
-    case 'k':{ // unpower motor
-      set_mode(ITEST);
+    case 'j':{ // Get position gains.
+      float kp;
+      float ki; 
       
-      static volatile int eint = 0; // calc eint
-      StoringData = 1;                // message to ISR to start storing data
-      while (StoringData){            // wait until ISR says data storing is done
+      kp = get_pgain_kp();
+      ki = get_pgain_ki();
+      sprintf(buffer, "The position controller is using Kp = %f and Ki = %f.\r\n",kp,ki);
+      NU32DIP_WriteUART1(buffer);
+      break;       
+    }
+    case 'k':{ // test current gains
+      sprintf(buffer, "200");
+      NU32DIP_WriteUART1(buffer);
+      
+      set_mode(ITEST);
+      set_ieint(0);
+      set_stor(1);
+      while (get_stor()){            // wait until ISR says data storing is done
           _nop(); // do nothing 
       }
 
-      for (i = 0; i < PLOTPTS; i++){  // send plot data to MATLAB
+      struct cont_dat curr = get_cont();
+      for (int i = 0; i < PLOTPTS; i++){  // send plot data to MATLAB
                                       // when first number sent = 1, MATLAB knows we’re done
-      sprintf(message, "%d %d %d\r\n", PLOTPTS - i, ADCarray[i], REFarray[i]);
-      NU32DIP_WriteUART1(message);
+      sprintf(buffer, "%f %f\r\n", curr.iREF[i], curr.iADC[i]);
+      NU32DIP_WriteUART1(buffer);
+      }
+      set_mode(IDLE);
       break;       
     }
     case 'p':{ // unpower motor
@@ -198,8 +205,8 @@ int main(){
     default:{
       NU32DIP_YELLOW = 0; // turn on LED2 to indicate an error
       break;
-    }
-    }
-  }
+    }   
+  } //end switch
+  } //end while
   return 0;
-}
+} // end main

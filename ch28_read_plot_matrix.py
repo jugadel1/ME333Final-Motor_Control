@@ -34,54 +34,54 @@ def read_plot_matrix():
 
 from genref import genRef
 
-import serial
-ser = serial.Serial('COM95',230400,rtscts=1)
-print('Opening port: ')
-print(ser.name)
+# import serial
+# ser = serial.Serial('COM95',230400)
+# print('Opening port: ')
+# print(ser.name)
 
-has_quit = False
-# menu loop
-while not has_quit:
-    print('PIC32 MOTOR DRIVER INTERFACE')
-    # display the menu options; this list will grow
-    print('\tc: get encoder counts \te: reset encoder \td: read encoder angle \tq: Quit') # '\t' is a tab
-    # read the user's choice
-    selection = input('\nENTER COMMAND: ')
-    selection_endline = selection+'\n'
+# has_quit = False
+# # menu loop
+# while not has_quit:
+#     print('PIC32 MOTOR DRIVER INTERFACE')
+#     # display the menu options; this list will grow
+#     print('\tc: get encoder counts \te: reset encoder \td: read encoder angle \tq: Quit') # '\t' is a tab
+#     # read the user's choice
+#     selection = input('\nENTER COMMAND: ')
+#     selection_endline = selection+'\n'
      
-    # send the command to the PIC32
-    ser.write(selection_endline.encode()); # .encode() turns the string into a char array
+#     # send the command to the PIC32
+#     ser.write(selection_endline.encode()); # .encode() turns the string into a char array
     
-    # take the appropriate action
-    # there is no switch() in python, using if elif instead
-    if (selection == 'c'):
-        print('Requesting encoder counts: ')
-        n_str = ser.read_until(b'\n'); 
-        n_int = int(n_str)
-        print('Encoder counts = '+str(n_int)+'\n')
-    elif (selection == 'r'):
-        print('Requesting mode: ')
-        n_str = ser.read_until(b'\n'); 
-        n_int = int(n_str)
-        print('Mode = '+str(n_int)+'\n')
-    elif (selection == 'm'):
-        ref = genRef('cubic')
-        #print(len(ref))
-        t = range(len(ref))
-        plt.plot(t,ref,'r*-')
-        plt.ylabel('ange in degrees')
-        plt.xlabel('index')
-        plt.show()
-        # send 
-        ser.write((str(len(ref))+'\n').encode())
-        for i in ref:
-            ser.write((str(i)+'\n').encode())
-    elif (selection == 'o'):
-        read_plot_matrix()
-    elif (selection == 'q'):
-        print('Exiting client')
-        has_quit = True; # exit client
-        # be sure to close the port
-        ser.close()
-    else:
-        print('Invalid Selection ' + selection_endline)
+#     # take the appropriate action
+#     # there is no switch() in python, using if elif instead
+#     if (selection == 'c'):
+#         print('Requesting encoder counts: ')
+#         n_str = ser.read_until(b'\n'); 
+#         n_int = int(n_str)
+#         print('Encoder counts = '+str(n_int)+'\n')
+#     elif (selection == 'r'):
+#         print('Requesting mode: ')
+#         n_str = ser.read_until(b'\n'); 
+#         n_int = int(n_str)
+#         print('Mode = '+str(n_int)+'\n')
+#     elif (selection == 'm'):
+#         ref = genRef('cubic')
+#         #print(len(ref))
+#         t = range(len(ref))
+#         plt.plot(t,ref,'r*-')
+#         plt.ylabel('ange in degrees')
+#         plt.xlabel('index')
+#         plt.show()
+#         # send 
+#         ser.write((str(len(ref))+'\n').encode())
+#         for i in ref:
+#             ser.write((str(i)+'\n').encode())
+#     elif (selection == 'o'):
+#         read_plot_matrix()
+#     elif (selection == 'q'):
+#         print('Exiting client')
+#         has_quit = True; # exit client
+#         # be sure to close the port
+#         ser.close()
+#     else:
+#         print('Invalid Selection ' + selection_endline)

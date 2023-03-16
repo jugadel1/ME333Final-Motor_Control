@@ -1,17 +1,7 @@
 #include "icontrol.h"
 
-// Waveform variables
-#define NUMSAMPS 100                  // number of points in waveform
-static volatile int Waveform[NUMSAMPS]; // waveform, used in/out of ISR so volatile
-void makeWaveform();                    // Creates REF waveform square wave
 
-// Plotting arrays setup
-#define PLOTPTS 100                    // number of data points to plot
-#define DECIMATION 25                  // plot every 25th point
-static volatile float ADCarray[PLOTPTS]; // measured values to plot
-static volatile float REFarray[PLOTPTS]; // reference values to plot
-static volatile int StoringData = 1;   // if this flag = 1, currently storing
-
+// extern cont_dat cont;
 
 void __ISR(_TIMER_2_VECTOR, IPL5SOFT) icontroller(void){  // _TIMER_2_VECTOR = 8
     int d;
@@ -36,25 +26,37 @@ void __ISR(_TIMER_2_VECTOR, IPL5SOFT) icontroller(void){  // _TIMER_2_VECTOR = 8
             static int counter = 0; // initialize counter once
             static int plotind = 0; // index for data arrays; counts up to PLOTPTS
             static int decctr = 0; // counts to store data one every DECIMATION
-            static float adcval = 0; 
+            static float adcval = 0;
+            static float ma = 200.0; 
 
             adcval = INA219_read_current();
             
             // calculate u using control values
             static int e = 0; 
-            e =  Waveform[counter] - adcval; // calc e
-            eint = eint + e;
+            struct cont_dat curr = get_cont();
+                        
+            e =  ma - adcval; // calc e
+            int eint = get_ieint() + e;
             if (eint > 1000){ // integrator anti-windup
                 eint = 1000;
             }
             if (eint < -1000){
                 eint = -1000;
             }
-            
+            set_ieint(eint);
+
+            float iKi = get_igain_ki();
+            float iKp = get_igain_kp();
+
             float u = iKp*e + iKi*eint; // calc u    
             float unew = u + 0; // treat u as % centered at 0%
             if (unew > 100.0){
                 unew = 100.0;
+                dirxn = 1;
+            }
+            if (unew > 0 && unew <100){
+                unew = unew;
+                dirxn = 1;
             }
             if (unew < 0 && unew > -100.0){
                 unew = -unew;
@@ -68,33 +70,34 @@ void __ISR(_TIMER_2_VECTOR, IPL5SOFT) icontroller(void){  // _TIMER_2_VECTOR = 8
             OC1RS = (unsigned int) ((unew/100.0) * PR3); // set duty based on PWM
             LATAbits.LATA1 = dirxn; // set direction pin
 
-            if (StoringData) {
+            if (get_stor()) {
             decctr++;
                 if (decctr == DECIMATION) { // after DECIMATION control loops,
                     decctr = 0; // reset decimation counter
-                    ADCarray[plotind] = adcval; // store data in global arrays
-                    REFarray[plotind] = Waveform[counter];
+                    // curr.iADC[plotind] = adcval; // store data in global arrays
+                    // curr.iREF[plotind] =  ma;
+                    set_iADC(adcval,plotind);
+                    set_iREF(ma,plotind);
                     plotind++; // increment plot data index
                 }
                 if (plotind == PLOTPTS) { // if max number of plot points plot is reached,
                     plotind = 0; // reset the plot index
-                    StoringData = 0; // tell main data is ready to be sent to python
+                    set_stor(0); // tell main data is ready to be sent to python
                 }
             }
             // rest of interrupt
             counter++; // add one to counter every time ISR is entered
-            if (counter == NUMSAMPS){
+            if (counter == PLOTPTS ){
                 counter = 0; // roll the counter over when needed
             }
-        }
-    }
-        // rest of interrupt
-        counter++; // add one to counter every time ISR is entered
-        if (counter == NUMSAMPS){
-            counter = 0; // roll the counter over when needed
+            if ((counter % 25)==0){
+                ma = -ma;
+            }
+
         }
     }
     IFS0bits.T2IF = 0; // clear interrupt flag
+    
 }
 
 void icontrolstartup(){
