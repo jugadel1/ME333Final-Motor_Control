@@ -4,23 +4,22 @@
 #include "ina219.h"
 #include "utilities.h"
 #include "icontrol.h"
-
+#include "pcontrol.h"
 #define BUF_SIZE 200
 
 int main(){
   char buffer[BUF_SIZE];
   NU32DIP_Startup(); // cache on, min flash wait, interrupts on, LED/button init, UART init
 
-  NU32DIP_YELLOW = 1;  // turn off the LEDs
-  NU32DIP_GREEN = 1;
+  NU32DIP_YELLOW = 0;  // turn on ON LED
+  NU32DIP_GREEN = 1;   // turn off problem LED
 
   __builtin_disable_interrupts(); // in future, initialize modules or peripherals here
-  
   UART2_Startup(); // initialize PICO encoder UART comm
   INA219_Startup(); // initialize ina219 current I2C comm  
   set_mode(IDLE); //initialize mode at IDLE
-  icontrolstartup(); //initialize timers 
-
+  icontrolstartup(); //initialize PWM (TM3) and I control (TMR2)
+  pcontrolstartup(); //initialize Posn control TMR4
   __builtin_enable_interrupts();
 
   while (1){
@@ -128,7 +127,7 @@ int main(){
       NU32DIP_ReadUART1(buffer, BUF_SIZE);
       sscanf(buffer, "%f %f %f", &kp, &ki, &kd);       
       
-      sprintf(buffer, "Sending Kp = %f and Ki = %f and Ki = %f to the position controller.\r\n",kp,ki,kd);
+      sprintf(buffer, "Sending Kp = %f and Ki = %f and Kd = %f to the position controller.\r\n",kp,ki,kd);
       NU32DIP_WriteUART1(buffer);
       set_pgains(kp,ki,kd);
       break;       
@@ -136,19 +135,20 @@ int main(){
     case 'j':{ // Get position gains.
       float kp;
       float ki; 
-      
+      float kd;      
       kp = get_pgain_kp();
       ki = get_pgain_ki();
-      sprintf(buffer, "The position controller is using Kp = %f and Ki = %f.\r\n",kp,ki);
+      kd = get_pgain_kd();
+      sprintf(buffer, "The position controller is using Kp = %f and Ki = %f and Kd = %f.\r\n",kp,ki,kd);
       NU32DIP_WriteUART1(buffer);
       break;       
     }
     case 'k':{ // test current gains
       sprintf(buffer, "200");
       NU32DIP_WriteUART1(buffer);
-      
+      set_ieint(0);     
       set_mode(ITEST);
-      set_ieint(0);
+
       set_stor(1);
       while (get_stor()){            // wait until ISR says data storing is done
           _nop(); // do nothing 
@@ -161,6 +161,48 @@ int main(){
       NU32DIP_WriteUART1(buffer);
       }
       set_mode(IDLE);
+      break;       
+    }
+    case 'l':{ // go to hold angle 
+      WriteUART2("b");
+      int des_deg;
+      NU32DIP_ReadUART1(buffer, BUF_SIZE);
+      sscanf(buffer, "%d", &des_deg);                 
+      
+      sprintf(buffer, "Sending desired angle = %d to the position controller.\r\n",des_deg);
+      NU32DIP_WriteUART1(buffer);
+      set_peint(0);
+      set_pedot(0);
+      set_hold(des_deg);
+      set_mode(HOLD);
+      break;       
+    }
+    case 'm':{ // load cubic trajectory
+      int len;
+      float step;
+      NU32DIP_ReadUART1(buffer, BUF_SIZE);
+      sscanf(buffer, "%d", &len);     
+      for(int i=0; i<len; i++){
+        NU32DIP_ReadUART1(buffer, BUF_SIZE);
+        sscanf(buffer, "%d", &step);
+        write_PosTraj(i,step);     
+      }
+      sprintf(buffer, "Received cubic Trajectory.\r\n");
+      NU32DIP_WriteUART1(buffer);      
+      break;       
+    }
+    case 'n':{ // load step trajectory
+      int len;
+      float step;
+      NU32DIP_ReadUART1(buffer, BUF_SIZE);
+      sscanf(buffer, "%d", &len);     
+      for(int i=0; i<len; i++){
+        NU32DIP_ReadUART1(buffer, BUF_SIZE);
+        sscanf(buffer, "%d", &step);
+        write_PosTraj(i,step);     
+      }
+      sprintf(buffer, "Received step Trajectory.\r\n");
+      NU32DIP_WriteUART1(buffer);      
       break;       
     }
     case 'p':{ // unpower motor

@@ -123,22 +123,23 @@ while not has_quit:
         
         n_str = ser.read_until(b'\n');  # get the incremented number back
         print(n_str.decode() + '\n') # print it to the screen  
-    elif (selection == 'h'):
+    
+    elif (selection == 'h'): # h: Get current gains
         n_str = ser.read_until(b'\n');  # get the incremented number back
         print(n_str.decode() + '\n') # print it to the screen  
     
-    elif (selection == 'i'):
-        n_str = input('Enter your desired Kp position gain [recommended: _]:\r\n') # get the number to send
+    elif (selection == 'i'): # i: Set position gains
+        n_str = input('Enter your desired Kp position gain [recommended: 3]:\r\n') # get the number to send
         n_int = float(n_str) # turn it into an int
         print('Kp = ' + str(n_int)) # print it to the screen to double check
-        ser.write((str(n_int)).encode()); # send the number
+        ser.write((str(n_int) + ' ').encode()); # send the number
 
-        n_str = input('Enter your desired Ki position gain [recommended: _]:\r\n') # get the number to send
+        n_str = input('Enter your desired Ki position gain [recommended: 0.1]:\r\n') # get the number to send
         n_int = float(n_str) # turn it into an int
         print('Ki = ' + str(n_int)) # print it to the screen to double check
-        ser.write((str(n_int)+'\n').encode()); # send the number
+        ser.write((str(n_int) + ' ').encode()); # send the number
 
-        n_str = input('Enter your desired Kd position gain [recommended: _]:\r\n') # get the number to send
+        n_str = input('Enter your desired Kd position gain [recommended: 2]:\r\n') # get the number to send
         n_int = float(n_str) # turn it into an int
         print('Ki = ' + str(n_int)) # print it to the screen to double check
         ser.write((str(n_int)+'\n').encode()); # send the number
@@ -146,14 +147,62 @@ while not has_quit:
         n_str = ser.read_until(b'\n');  # get the incremented number back
         print(n_str.decode() + '\n') # print it to the screen  
     
-    elif (selection == 'j'):
+    elif (selection == 'j'): # j: Get position gains
         n_str = ser.read_until(b'\n');  # get the incremented number back
         print(n_str.decode() + '\n') # print it to the screen      
     
-    elif (selection == 'k'):
+    elif (selection == 'k'): # k: Test current control
         print('Starting I control gains testing')
         read_plot_matrix()  
-      
+    
+    elif (selection == 'l'): # l: Go to angle (deg)
+        n_str = input('Enter your desired hold angle:\r\n') # get the number to send
+        n_int = int(n_str) # turn it into an int
+        ser.write((str(n_int)+'\n').encode()); # send the number        
+        
+        n_str = ser.read_until(b'\n');  # get the incremented number back
+        print(n_str.decode() + '\n') # print it to the screen  
+        print('Going to Hold angle')
+        for i in range(1001):
+            n_str = ser.read_until(b'\n');  # get the incremented number back
+            print(n_str.decode() + '\n') # print it to the screen  
+
+    elif (selection == 'm'):
+        print('Max Five Seconds!')
+        ref = genRef('cubic')
+        print(len(ref))
+        t = range(len(ref))
+        plt.plot(t,ref,'r*-')
+        plt.ylabel('angel in degrees')
+        plt.xlabel('index')
+        plt.show()
+        # send 
+        ser.write((str(len(ref))+'\n').encode())
+        for i in ref:
+            ser.write((str(i)+'\n').encode())
+        n_str = ser.read_until(b'\n');  # get the incremented number back
+        print(n_str.decode() + '\n') # print it to the screen      
+    
+    elif (selection == 'n'):
+        print('Max Five Seconds!')
+        ref = genRef('step')
+        print(len(ref))
+        t = range(len(ref))
+        plt.plot(t,ref,'r*-')
+        plt.ylabel('ange in degrees')
+        plt.xlabel('index')
+        plt.show()
+        # send 
+        ser.write((str(len(ref))+'\n').encode())
+        for i in ref:
+            ser.write((str(i)+'\n').encode())   
+        n_str = ser.read_until(b'\n');  # get the incremented number back
+        print(n_str.decode() + '\n') # print it to the screen      
+    
+    elif (selection == 'o'):
+        print('Executing loaded trajectory')
+        read_plot_matrix()  
+    
     elif (selection == 'p'):
         print('Unpowering motor, setting mode=IDLE.\n')
 

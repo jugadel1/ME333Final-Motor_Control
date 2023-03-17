@@ -5,13 +5,18 @@ volatile enum mode_t mode;
 volatile int duty = 0;
 volatile int dir = 0;
 
-volatile float iKi = 0;
-volatile float iKp = 0;
-volatile int ieint = 0;
+volatile float iKi = 0.12;
+volatile float iKp = 0.12;
+volatile int ieint = 0.12;
 
-volatile float pKi = 0;
-volatile float pKp = 0;
-volatile float pKd = 0;
+volatile float pKp = 3;
+volatile float pKi = 0.1;
+volatile float pKd = 2;
+volatile float pIREF = 0;
+volatile int deg_hold = 0;
+volatile float peint = 0;
+volatile float pelast = 0;
+
 volatile int StoringData = 1;   // if this flag = 1, currently storing
 
 volatile struct cont_dat cont;
@@ -59,7 +64,7 @@ int get_ieint(){
 }
 
 // position gain set/get
-void set_pgains(float kp, float ki,float kd ) {
+void set_pgains(float kp, float ki,float kd){
 	pKi = ki;
 	pKp = kp;
 	pKd = kd;
@@ -73,6 +78,31 @@ float get_pgain_kp(){
 float get_pgain_kd(){
 	return pKd;
 }
+void set_pcontrol_iref(float d){
+	pIREF = d;
+}
+float get_pcontrol_iref(){
+	return pIREF;
+}
+void set_hold(float d){
+	deg_hold = d;
+}
+float get_hold(){
+	return deg_hold;
+}
+void set_peint(float d){
+	peint = d;
+}
+float get_peint(){
+	return peint;
+}
+void set_pedot(float d){
+	pelast = d;
+}
+float get_pedot(){
+	return pelast;
+}
+
 
 volatile struct cont_dat get_cont(){
 	return cont;
@@ -82,6 +112,9 @@ void set_iADC(float s, int i){
 }
 void set_iREF(float s, int i){
 	cont.iREF[i] =  s;
+}
+void write_PosTraj(int i,float step){
+	cont.pREF[i] =  step;
 }
 
 void set_stor(int i){
