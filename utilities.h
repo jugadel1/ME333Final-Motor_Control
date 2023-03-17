@@ -61,5 +61,5 @@ void set_iREF(float s, int i);
 void set_stor(int i);
 int get_stor();
 void write_PosTraj(int i,float step);
-
+void set_pADC(float s, int i);
 #endif // UTILITIES__H__

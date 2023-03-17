@@ -136,6 +136,48 @@ void __ISR(_TIMER_2_VECTOR, IPL5SOFT) icontroller(void){  // _TIMER_2_VECTOR = 8
             OC1RS = (unsigned int) ((unew/100.0) * PR3); // set duty based on PWM
             LATAbits.LATA1 = dirxn; // set direction pin
         }
+        case TRACK:{
+            static float adcval = 0;
+            static float ma;
+            ma = get_pcontrol_iref();
+            adcval = INA219_read_current();
+            
+            // calculate u using control values
+            static int e = 0;                       
+            e =  ma - adcval; // calc e
+            int eint = get_ieint() + e;
+            if (eint > 1000){ // integrator anti-windup
+                eint = 1000;
+            }
+            if (eint < -1000){
+                eint = -1000;
+            }
+            set_ieint(eint);
+
+            float iKi = get_igain_ki();
+            float iKp = get_igain_kp();
+
+            float u = iKp*e + iKi*eint; // calc u    
+            float unew = u + 0; // treat u as % centered at 0%
+            if (unew > 100.0){
+                unew = 100.0;
+                dirxn = 1;
+            }
+            if (unew > 0 && unew <100){
+                unew = unew;
+                dirxn = 1;
+            }
+            if (unew < 0 && unew > -100.0){
+                unew = -unew;
+                dirxn = 0;  //unsure
+            }
+            if (unew < -100.0){
+                unew = 100.0;
+                dirxn = 0;  //unsure
+            }
+            OC1RS = (unsigned int) ((unew/100.0) * PR3); // set duty based on PWM
+            LATAbits.LATA1 = dirxn; // set direction pin
+        }
     }
     IFS0bits.T2IF = 0; // clear interrupt flag
     

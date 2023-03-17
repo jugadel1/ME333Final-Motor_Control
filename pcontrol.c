@@ -43,7 +43,7 @@ void __ISR(_TIMER_4_VECTOR, IPL4SOFT) pcontroller(void){  // _TIMER_4_VECTOR = ?
                 unew = -1000.0;
             }
             static char buffer[200];
-            sprintf(buffer, "current pos control: %f, e = %f, eint = %f, ed = %f\r\n", unew,e,eint,ederiv);
+            sprintf(buffer, "Current PID: %f, e: %f, eint: %f, ed: %f\r\n", unew,e,eint,ederiv);
             NU32DIP_WriteUART1(buffer);
 
             set_pcontrol_iref(unew);
@@ -55,11 +55,15 @@ void __ISR(_TIMER_4_VECTOR, IPL4SOFT) pcontroller(void){  // _TIMER_4_VECTOR = ?
             break;
         }
         case TRACK:{
-            static int counter = 0;
+            static int counter = 0; // initialize counter once
+            static int plotind = 0; // index for data arrays; counts up to PLOTPTS
+            static int decctr = 0; // counts to store data one every DECIMATION
             static int pos;
             static int pos_hold;
             pos = get_deg();
-            pos_hold = get_hold();
+            
+            struct cont_dat curr = get_cont();
+            pos_hold = curr.pREF[counter];
 
             // calculate u using control values
             static float e;                         
@@ -95,13 +99,27 @@ void __ISR(_TIMER_4_VECTOR, IPL4SOFT) pcontroller(void){  // _TIMER_4_VECTOR = ?
                 unew = -1000.0;
             }
             set_pcontrol_iref(unew);
-            counter++;
-            if (counter > 1000){
-                counter = 0;
-                set_mode(IDLE);
+            
+            if (get_stor()) {
+            decctr++;
+                if (decctr == DECIMATION) { // after DECIMATION control loops,
+                    decctr = 0; // reset decimation counter
+                    set_pADC(pos,plotind);
+                    plotind++; // increment plot data index
+                }
+                if (plotind == NUMPOS) { // if max number of plot points plot is reached,
+                    plotind = 0; // reset the plot index
+                    set_stor(0); // tell main data is ready to be sent to python
+                }
+            }
+            // rest of interrupt
+            counter++; // add one to counter every time ISR is entered
+            if (counter == NUMPOS ){
+                counter = 0; // roll the counter over when needed
             }
             break;                 
         }
+        
     }  
     IFS0bits.T4IF = 0; // clear interrupt flag   
 }

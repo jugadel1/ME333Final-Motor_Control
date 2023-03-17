@@ -13,10 +13,15 @@ ser = serial.Serial('COM3',230400)
 print('Opening port: ')
 print(ser.name)
 
-def read_plot_matrix():
-    n_str = ser.read_until(b'\n');  # get the number of data points to receive
-    n_int = int(n_str.decode()) # turn it into an int
-
+def read_plot_matrix(x):
+    if x == "ITEST":
+            n_str = ser.read_until(b'\n');  # get the number of data points to receive
+            print(n_str)
+            n_int = int(n_str) # turn it into an int
+    elif x == "TRAJ":
+        n_str = ser.read_until(b'\n');  # get the number of data points to receive
+        # print(n_str)
+        n_int = int(n_str) # turn it into an int
     print('Data length = ' + str(n_int))
     ref = []
     data = []
@@ -153,7 +158,7 @@ while not has_quit:
     
     elif (selection == 'k'): # k: Test current control
         print('Starting I control gains testing')
-        read_plot_matrix()  
+        read_plot_matrix("ITEST")  
     
     elif (selection == 'l'): # l: Go to angle (deg)
         n_str = input('Enter your desired hold angle:\r\n') # get the number to send
@@ -167,13 +172,13 @@ while not has_quit:
             n_str = ser.read_until(b'\n');  # get the incremented number back
             print(n_str.decode() + '\n') # print it to the screen  
 
-    elif (selection == 'm'):
+    elif (selection == 'm'): # m: Load step trajectory
         print('Max Five Seconds!')
-        ref = genRef('cubic')
+        ref = genRef('step')
         print(len(ref))
         t = range(len(ref))
         plt.plot(t,ref,'r*-')
-        plt.ylabel('angel in degrees')
+        plt.ylabel('angle in degrees')
         plt.xlabel('index')
         plt.show()
         # send 
@@ -181,27 +186,27 @@ while not has_quit:
         for i in ref:
             ser.write((str(i)+'\n').encode())
         n_str = ser.read_until(b'\n');  # get the incremented number back
-        print(n_str.decode() + '\n') # print it to the screen      
+        print(n_str.decode() + '\n') # print it to the screen 
     
-    elif (selection == 'n'):
+    elif (selection == 'n'): # n: Load cubic trajectory
         print('Max Five Seconds!')
-        ref = genRef('step')
+        ref = genRef('cubic')
         print(len(ref))
         t = range(len(ref))
         plt.plot(t,ref,'r*-')
-        plt.ylabel('ange in degrees')
+        plt.ylabel('angle in degrees')
         plt.xlabel('index')
         plt.show()
         # send 
         ser.write((str(len(ref))+'\n').encode())
         for i in ref:
-            ser.write((str(i)+'\n').encode())   
+            ser.write((str(i)+'\n').encode())
         n_str = ser.read_until(b'\n');  # get the incremented number back
-        print(n_str.decode() + '\n') # print it to the screen      
+        print(n_str.decode() + '\n') # print it to the screen 
     
     elif (selection == 'o'):
         print('Executing loaded trajectory')
-        read_plot_matrix()  
+        read_plot_matrix("TRAJ")  
     
     elif (selection == 'p'):
         print('Unpowering motor, setting mode=IDLE.\n')

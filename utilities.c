@@ -123,3 +123,6 @@ void set_stor(int i){
 int get_stor(){
 	return StoringData;
 }
+void set_pADC(float s, int i){
+	cont.pADC[i] =  s;
+}

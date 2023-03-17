@@ -144,7 +144,7 @@ int main(){
       break;       
     }
     case 'k':{ // test current gains
-      sprintf(buffer, "200");
+      sprintf(buffer, "200\r\n");
       NU32DIP_WriteUART1(buffer);
       set_ieint(0);     
       set_mode(ITEST);
@@ -177,32 +177,55 @@ int main(){
       set_mode(HOLD);
       break;       
     }
-    case 'm':{ // load cubic trajectory
+    case 'm':{ // load step trajectory
       int len;
       float step;
       NU32DIP_ReadUART1(buffer, BUF_SIZE);
       sscanf(buffer, "%d", &len);     
       for(int i=0; i<len; i++){
         NU32DIP_ReadUART1(buffer, BUF_SIZE);
-        sscanf(buffer, "%d", &step);
+        sscanf(buffer, "%f", &step);
         write_PosTraj(i,step);     
       }
-      sprintf(buffer, "Received cubic Trajectory.\r\n");
-      NU32DIP_WriteUART1(buffer);      
+      sprintf(buffer, "Received Step Trajectory.\r\n");
+      NU32DIP_WriteUART1(buffer);
       break;       
     }
-    case 'n':{ // load step trajectory
+    case 'n':{ // load cubic trajectory
       int len;
       float step;
       NU32DIP_ReadUART1(buffer, BUF_SIZE);
       sscanf(buffer, "%d", &len);     
       for(int i=0; i<len; i++){
         NU32DIP_ReadUART1(buffer, BUF_SIZE);
-        sscanf(buffer, "%d", &step);
+        sscanf(buffer, "%f", &step);
         write_PosTraj(i,step);     
       }
-      sprintf(buffer, "Received step Trajectory.\r\n");
-      NU32DIP_WriteUART1(buffer);      
+      sprintf(buffer, "Received Cubic Trajectory.\r\n");
+      NU32DIP_WriteUART1(buffer);
+      break;         
+    }
+    case 'o':{ // execute trajectory
+      WriteUART2("b");
+      sprintf(buffer, "1000\r\n");
+      NU32DIP_WriteUART1(buffer);
+
+      set_pedot(0);
+      set_peint(0);     
+      set_mode(TRACK);
+
+      set_stor(1);
+      while (get_stor()){            // wait until ISR says data storing is done
+          _nop(); // do nothing 
+      }
+
+      struct cont_dat curr = get_cont();
+      for (int i = 0; i < NUMPOS; i++){  // send plot data to MATLAB
+                                      // when first number sent = 1, MATLAB knows we’re done
+      sprintf(buffer, "%f %f\r\n", curr.pREF[i], curr.pADC[i]);
+      NU32DIP_WriteUART1(buffer);
+      }
+      set_mode(IDLE);
       break;       
     }
     case 'p':{ // unpower motor
