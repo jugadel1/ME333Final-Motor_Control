@@ -1,6 +1,11 @@
 $ cat .gitignore
 
 *.ini
+*.o
+*.dis
+*.elf
+*.hex
+*.map
 **/.vscode
-**/__pycache
+**/__pycache__
 *.gitignore
